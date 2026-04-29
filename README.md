@@ -117,18 +117,3 @@ python train/train_encoders.py --model deberta-v3-base
 # Evaluate
 python train/eval_encoder.py --model-path models/deberta-v3-base_personahate/final
 ```
-
-## Ethical Statement
-
-The PersonaHate dataset contains LLM-generated hate speech intended **exclusively** for training and evaluating hate speech detection systems. The content targets 34 identity groups and includes explicit hateful language. This data is released under a research-only license. All generated content is synthetic and does not represent the views of any real individual.
-
-## Citation
-
-```bibtex
-@inproceedings{personahate2025,
-  title={PersonaHate: Persona-Driven Hate Speech Generation for Robust Detection},
-  author={Anonymous},
-  booktitle={Proceedings of the ACM Conference on Computer and Communications Security (CCS)},
-  year={2025}
-}
-```
