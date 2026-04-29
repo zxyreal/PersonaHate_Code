@@ -1,0 +1,22 @@
+# NewWave topic groups - replacing identity_groups for NewWave experiment
+newwave_groups = [
+    "Russians",
+    "Ukrainians",
+    "Russian immigrants",
+    "people who support Russia in the war",
+    "people who support Ukraine in the war",
+    "Chinese people during COVID",
+    "Asian people blamed for the pandemic",
+    "anti-vaxxers",
+    "unvaccinated people",
+    "people who refuse vaccines",
+    "pro-vaccine advocates",
+    "anti-maskers",
+    "people who refuse to wear masks",
+    "mask mandate supporters",
+    "Trump supporters and MAGA movement",
+    "Capitol rioters",
+    "people who stormed the Capitol",
+    "elderly people and baby boomers",
+    "older generation",
+]
