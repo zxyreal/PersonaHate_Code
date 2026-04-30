@@ -112,7 +112,7 @@ python persona_2_speech/vote_label_6judge.py --input generated_speech.jsonl
 ### 3. Training & Evaluation
 ```bash
 # Train encoder
-python train/train_encoders.py --model deberta-v3-base
+python train/train_encoders.py --model deberta-v3
 
 # Evaluate
 python train/eval_encoder.py --model-path models/deberta-v3-base_personahate/final
