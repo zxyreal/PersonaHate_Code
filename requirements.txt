@@ -1,0 +1,23 @@
+# Core dependencies
+openai
+python-dotenv
+tqdm
+numpy
+pandas
+
+# For Vertex AI (Gemini, Claude)
+google-cloud-aiplatform
+google-auth
+google-genai
+anthropic[vertex]
+
+# For training
+torch
+transformers
+datasets
+scikit-learn
+peft
+trl
+
+# Optional: For local model inference (Linux + NVIDIA GPU only)
+# vllm
