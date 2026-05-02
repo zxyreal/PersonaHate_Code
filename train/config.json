@@ -1,0 +1,33 @@
+{
+    "eval": {
+        "data_dir": "data/benchmarks",
+        "hatexplain": "all_7_models_voting.csv",
+        "davidson": "davidson_labeled_data.csv",
+        "mhs": "mhs_aggregated.csv",
+        "newwave": "new_wave_hate/data_ground_truth.csv"
+    },
+    "build_training_set": {
+        "speech_dir": "persona_2_speech/hatespeech",
+        "labeled_file": "personas_merged_speech_labeled_6judge.jsonl",
+        "model_dirs": [
+            "gpt4o-mini",
+            "claude-3-haiku",
+            "gemini-2.5-flash",
+            "deepseek-r1",
+            "llama-3.1-8b",
+            "mistral-7b",
+            "qwen2.5-7b",
+            "gemma-2-9b"
+        ],
+        "n_per_group": 1000,
+        "output": "personahate_train_balanced_6judge.jsonl"
+    },
+    "train_encoders": {
+        "data_path": "data/personahate_train_balanced_6judge_subset.jsonl",
+        "output_dir": "models"
+    },
+    "train_llm_sft": {
+        "data_path": "data/personahate_train_balanced_6judge_subset.jsonl",
+        "output_dir": "models"
+    }
+}
