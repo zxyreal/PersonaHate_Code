@@ -1,0 +1,22 @@
+{
+    "extract_persona_from_4chan": {
+        "input_file": "data/pol_062016-112019_labeled.ndjson",
+        "output_path": "data/output/personas.ndjson",
+        "sample_size": 10
+    },
+    "process_personas_4chan": {
+        "input": "data/output/personas.ndjson",
+        "n_select": 1285,
+        "threshold": 0.9
+    },
+    "process_personas_personahub": {
+        "input": "data/persona_personahub_200k.jsonl",
+        "n_select": 1,
+        "threshold": 0.9
+    },
+    "merge_personas": {
+        "input_4chan": "data/output/persona_selected_1285.jsonl",
+        "input_personahub": "data/output/personahub_selected_1.jsonl",
+        "output": "data/output/personas_merged.jsonl"
+    }
+}
