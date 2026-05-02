@@ -1,0 +1,39 @@
+{
+    "generate_hatespeech": {
+        "persona_dir": "../text_2_persona/data/output",
+        "output_dir": "hatespeech",
+        "persona_files": [
+            "personas_merged.jsonl"
+        ]
+    },
+    "postprocess": {
+        "speech_dir": "hatespeech",
+        "speech_file": "personas_merged_speech.jsonl",
+        "model_dirs": {
+            "gpt4o-mini": "gpt4o-mini",
+            "claude": "claude-3-haiku",
+            "deepseek-r1": "deepseek-r1",
+            "gemini": "gemini-2.5-flash",
+            "qwen2.5-7b": "qwen2.5-7b",
+            "mistral-7b": "mistral-7b",
+            "gemma-2-9b": "gemma-2-9b",
+            "llama-3.1-8b": "llama-3.1-8b"
+        }
+    },
+    "vote_label": {
+        "speech_dir": "hatespeech",
+        "speech_file": "personas_merged_speech.jsonl",
+        "workers": 5,
+        "batch_size": 200,
+        "model_dirs": {
+            "gpt4o-mini": "gpt4o-mini",
+            "claude": "claude-3-haiku",
+            "deepseek-r1": "deepseek-r1",
+            "gemini": "gemini-2.5-flash",
+            "qwen2.5-7b": "qwen2.5-7b",
+            "mistral-7b": "mistral-7b",
+            "gemma-2-9b": "gemma-2-9b",
+            "llama-3.1-8b": "llama-3.1-8b"
+        }
+    }
+}
