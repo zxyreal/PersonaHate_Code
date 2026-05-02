@@ -2,118 +2,237 @@
 
 A persona-driven pipeline for generating diverse, labeled hate speech data to train and evaluate hate speech detectors.
 
-## Pipeline Overview
-
-```
-text_2_persona/          →  persona_2_speech/         →  train/
-Persona Construction        Speech Generation &          Model Training &
-& Selection                 Annotation                   Evaluation
-```
-
-## Directory Structure
-
-### `text_2_persona/` — Persona Construction & Selection
-
-| File | Description |
-|------|-------------|
-| `extract_persona_from_4chan.py` | Extract persona descriptions from 4chan /pol/ posts using GPT-4o |
-| `process_personas.py` | Embed personas, deduplicate (cosine similarity > 0.9), merge pools |
-| `da_fps.py` | Core FPS / DA-FPS / Random sampling algorithms |
-| `run_fps_comparison.py` | Compare selection methods, generate UMAP visualizations |
-| `process_personas_fast.py` | Fast variant using Faiss-accelerated deduplication |
-| `run_dafps_personahub.py` | Process and select PersonaHub personas |
-
-**Data:**
-- `data/persona_merged.jsonl` — Merged persona pool (457,473: 257K 4chan + 200K PersonaHub)
-- `data/persona_selected_2285_fps_stratified.jsonl` — FPS-selected personas (2,285)
-
-### `persona_2_speech/` — Speech Generation & Annotation
-
-| File | Description |
-|------|-------------|
-| `generate_hatespeech.py` | Unified generation script (8 models: API + vLLM) |
-| `model_adapters.py` | Model-specific adapters for speech extraction and refusal detection |
-| `identity.py` | 34 identity groups across 6 categories |
-| `vote_label_6judge.py` | 6-judge voting annotation (GPT-4o-mini, Claude, Gemini, Gemma, OpenAI Moderation, LlamaGuard) |
-| `postprocess.py` | Post-processing: refusal detection, normalization, length filtering |
-| `newwave_*.py` | NewWave extension for emerging hate topics |
-
-**Data:**
-- `hatespeech/personahate_train_balanced_6judge.jsonl` — Group-balanced training set (67,452 samples)
-- `hatespeech/{model}/` — Per-model generated speech with 6-judge labels (791,283 total)
-
-### `train/` — Model Training & Evaluation
-
-| File | Description |
-|------|-------------|
-| `train_encoders.py` | Train encoder models (BERT, RoBERTa, DeBERTa-v3, XLM-RoBERTa) |
-| `train_llm_sft.py` | SFT fine-tune Llama-3 / LlamaGuard on PersonaHate |
-| `train_cardiff.py` | Fine-tune Cardiff-RoBERTa on PersonaHate |
-| `eval_encoder.py` | Evaluate encoder models on hate speech benchmarks |
-| `eval_llm_sft.py` | Evaluate LLM SFT models via vLLM |
-| `eval_pergroup.py` | Per-identity-group evaluation on HateBenchSet |
-| `eval_baselines.py` | Evaluate commercial APIs (GPT-4o-mini, Claude, Gemini, etc.) |
-| `eval_pretrained_baselines.py` | Evaluate off-the-shelf hate speech models |
-| `ablation_*.py` | Ablation experiments (scaling, diversity, group coverage) |
-| `newwave_*.py` | NewWave pipeline: generate, vote, train, evaluate |
-| `plot_*.py` | Visualization scripts (t-SNE, UMAP, scaling curves) |
-
-## Dataset Statistics
-
-| Property | Value |
-|----------|-------|
-| Total generated samples | 791,283 |
-| Generator models | 8 (3 API + 5 open-weight) |
-| Identity groups | 34 (6 categories) |
-| Judge models | 6 |
-| Voting threshold | ≥ 4/6 |
-| Training set (balanced) | 67,452 (33,726 hate / 33,726 non-hate) |
-| Unique personas | 2,285 (1,000 PersonaHub + 1,285 4chan) |
-
 ## Requirements
 
+- Python 3.8+
+- OpenAI API key
+- Hugging Face token (for downloading models)
+- Google Cloud project (for Vertex AI: Gemini, Claude)
+
+## Installation
+
+```bash
+pip install -r requirements.txt
 ```
-torch
-transformers
-datasets
-sentence-transformers
-sklearn
-openai
-anthropic
-google-generativeai
-vllm
-faiss-gpu
-detoxify
+
+## Data
+
+Download the following datasets and place them in `text_2_persona/data/`:
+
+| File | Description | Source |
+|------|-------------|--------|
+| `pol_062016-112019_labeled.ndjson` | 4chan /pol/ dataset with toxicity labels | [TODO: Add link] |
+| `persona_personahub_200k.jsonl` | PersonaHub 200k personas | [TODO: Add link] |
+
+**Pre-extracted personas (from our paper):**
+- `text_2_persona/data/output/personas_paper.jsonl` - 2,285 diverse personas selected via FPS (1,285 from 4chan + 1,000 from PersonaHub)
+
+**Pre-built training subset (for quick testing):**
+- `train/data/personahate_train_balanced_6judge_subset.jsonl` - 13,600 samples (200 hate + 200 non-hate per group)
+
+**Evaluation benchmarks** (place in `train/data/benchmarks/`, all available on HuggingFace):
+
+For multi-class datasets, we focus on binary hate speech detection by retaining hate and non-hate samples and removing samples labeled as offensive.
+
+| File | Dataset |
+|------|---------|
+| `all_7_models_voting.csv` | HateXplain |
+| `davidson_labeled_data.csv` | Davidson |
+| `mhs_aggregated.csv` | Measuring Hate Speech |
+| (auto-downloaded) | HateBenchSet |
+| `new_wave_hate/data_ground_truth.csv` | NewWave |
+
+## Configuration
+
+Create a `.env` file in the project root:
+
+```
+OPENAI_API_KEY=your_api_key_here
+GOOGLE_CLOUD_PROJECT=your_gcp_project_id
+GOOGLE_CLOUD_LOCATION=us-central1
+HF_TOKEN=your_huggingface_token_here
 ```
 
 ## Usage
 
-### 1. Persona Construction
+### Step 1: Extract Personas
+
+Extract persona descriptions from toxic posts using GPT-4o.
+
 ```bash
-# Extract personas from 4chan /pol/ dataset
-python text_2_persona/extract_persona_from_4chan.py --input pol_data.ndjson --output personas.jsonl
-
-# Deduplicate and merge
-python text_2_persona/process_personas.py --input personas.jsonl --threshold 0.9
-
-# Select diverse subset via FPS
-python text_2_persona/run_fps_comparison.py
+cd text_2_persona
+python extract_persona_from_4chan.py
 ```
 
-### 2. Speech Generation & Annotation
-```bash
-# Generate speech from personas
-python persona_2_speech/generate_hatespeech.py --model gpt4o-mini --personas data/persona_selected_2285_fps_stratified.jsonl
+| Argument | Description |
+|----------|-------------|
+| `--input_file` | Input NDJSON file path |
+| `--output_path` | Output file path |
+| `--sample_size` | Number of posts to process |
+| `--num_workers` | Number of parallel workers (default: CPU count - 1) |
 
-# Annotate with 6-judge voting
-python persona_2_speech/vote_label_6judge.py --input generated_speech.jsonl
+### Step 2: Process Personas
+
+Compute embeddings, remove duplicates, and select diverse personas using FPS.
+
+**For 4chan personas:**
+```bash
+cd text_2_persona
+python process_personas_4chan.py
 ```
 
-### 3. Training & Evaluation
+**For PersonaHub personas:**
 ```bash
-# Train encoder
-python train/train_encoders.py --model deberta-v3
-
-# Evaluate
-python train/eval_encoder.py --model-path models/deberta-v3-base_personahate/final
+cd text_2_persona
+python process_personas_personahub.py
 ```
+
+| Argument | Description |
+|----------|-------------|
+| `--input` | Input JSONL file |
+| `--threshold` | Similarity threshold for deduplication (default: 0.9) |
+| `--n_select` | Number of diverse personas to select |
+| `--skip_embedding` | Skip embedding computation, use cached embeddings |
+
+Output files:
+- `persona_deduplicated.jsonl` - Personas after removing duplicates
+- `persona_selected_{n}.jsonl` - Final diverse persona selection
+
+### Step 3: Merge Personas
+
+Merge 4chan and PersonaHub personas into a single file.
+
+```bash
+cd text_2_persona
+python merge_personas.py
+```
+
+Output: `personas_merged.jsonl`
+
+### Step 4: Generate Speech
+
+Generate speech from personas using various LLMs.
+
+```bash
+cd persona_2_speech
+python generate_hatespeech.py --model gpt4o-mini
+```
+
+Available models:
+- `gpt4o-mini` - GPT-4o-mini (OpenAI)
+- `gemini` - Gemini 2.5 Flash (Vertex AI)
+- `claude` - Claude 3 Haiku (Vertex AI)
+- `llama-3.1-8b`, `qwen2.5-7b`, `deepseek-r1`, `mistral-7b`, `gemma-2-9b` - Local models (vLLM)
+
+**For vLLM models**, start the server first:
+```bash
+python -m vllm.entrypoints.openai.api_server --model <model_name>
+```
+
+| Argument | Description |
+|----------|-------------|
+| `--model` | Model to use |
+| `--persona-file` | Specific persona file |
+| `--max-workers` | Number of parallel workers |
+| `--num-personas` | Number of personas to use |
+
+### Step 5: Postprocess
+
+Clean outputs and fix missed refusals.
+
+```bash
+cd persona_2_speech
+python postprocess.py
+```
+
+### Step 6: Label with Judges
+
+Label generated speech using 6 judges (majority vote).
+
+```bash
+cd persona_2_speech
+python vote_label_6judge.py --model gpt4o-mini
+```
+
+Judges: GPT-4o-mini, Claude-3-Haiku, Gemini-2.5-Flash, Gemma-2-9B, OpenAI Moderation, LlamaGuard-3
+
+| Argument | Description |
+|----------|-------------|
+| `--model` | Specific generator model to label |
+| `--workers` | Number of parallel workers |
+| `--api-only` | Only use API judges (skip vLLM) |
+| `--phase1` | Use 5 judges (no LlamaGuard) |
+| `--phase2` | Add LlamaGuard to existing labels |
+
+### Step 7: Build Training Set
+
+Build group-balanced training set from labeled data.
+
+```bash
+cd train
+python build_training_set.py
+```
+
+| Argument | Description |
+|----------|-------------|
+| `--n-per-group` | Max hate/non-hate samples per group (default: 1000) |
+| `--output` | Output filename |
+
+Output: `train/data/personahate_train_balanced_6judge.jsonl`
+
+### Step 8: Train Models
+
+**Train encoder models** (BERT, RoBERTa, DeBERTa, XLM-RoBERTa):
+
+```bash
+cd train
+python train_encoders.py --model bert-base
+```
+
+| Model | Name |
+|-------|------|
+| `bert-base` | bert-base-uncased |
+| `roberta-base` | roberta-base |
+| `deberta-v3-base` | microsoft/deberta-v3-base |
+| `xlm-roberta-base` | xlm-roberta-base |
+
+**Train LLM with LoRA** (Llama-3.1-8B, LlamaGuard-3-8B):
+
+```bash
+cd train
+python train_llm_sft.py --model llama-3.1-8b
+```
+
+| Argument | Description |
+|----------|-------------|
+| `--model` | Model to train |
+| `--max-samples` | Limit training samples |
+| `--epochs` | Number of epochs |
+| `--batch-size` | Batch size |
+
+### Step 9: Evaluate Models
+
+**Evaluate encoder models:**
+
+```bash
+cd train
+python eval_encoder.py --model-path models/bert-base_personahate/run_xxx/final --datasets all
+```
+
+| Argument | Description |
+|----------|-------------|
+| `--model-path` | Path to trained model |
+| `--datasets` | Datasets to evaluate: `hatexplain,hatebench,davidson,mhs,newwave,all` |
+
+**Evaluate LLM models** (requires vLLM server):
+
+```bash
+cd train
+python eval_llm_sft.py --host http://localhost:8000 --model <model_name>
+```
+
+| Argument | Description |
+|----------|-------------|
+| `--host` | vLLM server URL |
+| `--model` | Model name (auto-detect if not set) |
+| `--output` | Output JSON file |
